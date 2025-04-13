@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Red Dot</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="startScreen" class="modal">
+        <div class="modal-content">
+            <h1>Catch the Red Dot</h1>
+            <button id="startButton">Start Game</button>
+        </div>
+    </div>
+    <div id="gameContainer" style="display: none;">
+        <div id="uiContainer">
+            <div id="score">Score: 0</div>
+            <div id="time">Time: 30</div>
+            <div id="highScore">High Score: 0</div>
+        </div>
+        <div id="dot"></div>
+        <canvas id="backgroundCanvas"></canvas>
+    </div>
+    <div id="gameOverScreen" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Game Over!</h2>
+            <p>Your Score: <span id="finalScore"></span></p>
+            <p>High Score: <span id="finalHighScore"></span></p>
+            <div id="leaderboard">
+                <h3>Leaderboard</h3>
+                <table id="leaderboardTable">
+                    <tbody id="leaderboardList"></tbody>
+                </table>
+            </div>
+            <button id="restartButton">Play Again</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
