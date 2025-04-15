@@ -12,7 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeDisplay = document.getElementById('time');
     const highScoreDisplay = document.getElementById('highScore');
     const backgroundCanvas = document.getElementById('backgroundCanvas');
+    const trailCanvas = document.getElementById('trailCanvas');
     const ctxBackground = backgroundCanvas.getContext('2d');
+    const ctxTrail = trailCanvas.getContext('2d');
 
     let score = 0;
     let time = 30;
@@ -20,62 +22,120 @@ document.addEventListener('DOMContentLoaded', () => {
     let highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
     let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
     let timerId = null;
+    let particles = [];
 
     highScoreDisplay.textContent = `High Score: ${highScore}`;
 
-    function resizeCanvas() {
+    function resizeCanvases() {
         backgroundCanvas.width = window.innerWidth;
         backgroundCanvas.height = window.innerHeight;
+        trailCanvas.width = window.innerWidth;
+        trailCanvas.height = window.innerHeight;
     }
 
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    window.addEventListener('resize', resizeCanvases);
+    resizeCanvases();
 
-    function drawDynamicBackground() {
+    function drawCosmicBackground() {
         ctxBackground.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+        const gradient = ctxBackground.createRadialGradient(
+            backgroundCanvas.width / 2, backgroundCanvas.height / 2, 0,
+            backgroundCanvas.width / 2, backgroundCanvas.height / 2, backgroundCanvas.width
+        );
+        gradient.addColorStop(0, 'rgba(44, 83, 100, 0.8)');
+        gradient.addColorStop(0.5, 'rgba(52, 152, 219, 0.5)');
+        gradient.addColorStop(1, 'rgba(231, 76, 60, 0.2)');
+        ctxBackground.fillStyle = gradient;
+        ctxBackground.fillRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+
         const stars = [];
-        for (let i = 0; i < 150; i++) {
+        for (let i = 0; i < 200; i++) {
             stars.push({
                 x: Math.random() * backgroundCanvas.width,
                 y: Math.random() * backgroundCanvas.height,
                 radius: Math.random() * 2 + 1,
-                speed: Math.random() * 0.5 + 0.2
+                speed: Math.random() * 0.7 + 0.3,
+                hue: Math.random() * 360
             });
         }
 
-        function animateStars() {
+        function animateNebula() {
             ctxBackground.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+            ctxBackground.fillStyle = gradient;
+            ctxBackground.fillRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
             stars.forEach(star => {
                 star.y += star.speed;
                 if (star.y > backgroundCanvas.height) star.y = -star.radius;
                 ctxBackground.beginPath();
                 ctxBackground.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-                ctxBackground.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.7 + 0.3})`;
+                ctxBackground.fillStyle = `hsla(${star.hue}, 70%, 80%, ${Math.random() * 0.7 + 0.3})`;
                 ctxBackground.fill();
             });
-            requestAnimationFrame(animateStars);
+            requestAnimationFrame(animateNebula);
         }
 
-        animateStars();
+        animateNebula();
     }
 
-    drawDynamicBackground();
+    drawCosmicBackground();
+
+    function createParticle(x, y) {
+        return {
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 4,
+            vy: (Math.random() - 0.5) * 4,
+            radius: Math.random() * 3 + 1,
+            alpha: 1,
+            hue: Math.random() * 60 + 340
+        };
+    }
+
+    function drawTrail() {
+        ctxTrail.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+        const dotRect = dot.getBoundingClientRect();
+        const dotX = dotRect.left + dotRect.width / 2;
+        const dotY = dotRect.top + dotRect.height / 2;
+
+        if (gameActive) {
+            particles.push(createParticle(dotX, dotY));
+        }
+
+        particles = particles.filter(p => p.alpha > 0);
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha -= 0.02;
+            ctxTrail.beginPath();
+            ctxTrail.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctxTrail.fillStyle = `hsla(${p.hue}, 80%, 70%, ${p.alpha})`;
+            ctxTrail.fill();
+        });
+
+        requestAnimationFrame(drawTrail);
+    }
+
+    drawTrail();
 
     function moveDot() {
         if (!gameActive) return;
 
-        const maxX = gameContainer.clientWidth - dot.clientWidth;
-        const maxY = gameContainer.clientHeight - dot.clientHeight;
+        const dotWidth = parseFloat(getComputedStyle(dot).width);
+        const dotHeight = parseFloat(getComputedStyle(dot).height);
+        const maxX = gameContainer.clientWidth - dotWidth;
+        const maxY = gameContainer.clientHeight - dotHeight;
         const uiHeight = 100;
         const buffer = Math.max(50, window.innerHeight * 0.1);
+        const edgePadding = 10;
 
-        const newX = Math.floor(Math.random() * maxX);
-        const newY = Math.floor(Math.random() * (maxY - uiHeight - buffer)) + uiHeight + buffer;
+        const newX = Math.floor(Math.random() * (maxX - edgePadding * 2)) + edgePadding;
+        const newY = Math.floor(Math.random() * (maxY - uiHeight - buffer - edgePadding)) + uiHeight + buffer;
 
-        dot.style.left = newX + 'px';
-        dot.style.top = newY + 'px';
+        dot.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
+        dot.style.top = Math.max(uiHeight + buffer, Math.min(newY, maxY)) + 'px';
         dot.style.display = 'block';
         dot.style.opacity = '0';
+        dot.classList.add('orbiting');
         setTimeout(() => { dot.style.opacity = '1'; }, 10);
     }
 
@@ -112,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startScreen.style.display = 'none';
         gameContainer.style.display = 'block';
         gameOverScreen.style.display = 'none';
+        particles = [];
         moveDot();
         timerId = setInterval(updateTimer, 1000);
     }
@@ -130,12 +191,15 @@ document.addEventListener('DOMContentLoaded', () => {
         gameContainer.style.display = 'none';
         gameOverScreen.style.display = 'flex';
         dot.style.display = 'none';
+        dot.classList.remove('orbiting');
+        particles = [];
     }
 
     dot.addEventListener('click', () => {
         if (!gameActive) return;
         score++;
         scoreDisplay.textContent = `Score: ${score}`;
+        dot.classList.remove('orbiting');
         moveDot();
     });
 
@@ -144,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!gameActive) return;
         score++;
         scoreDisplay.textContent = `Score: ${score}`;
+        dot.classList.remove('orbiting');
         moveDot();
     });
 
